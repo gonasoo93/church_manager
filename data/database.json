@@ -1,0 +1,155 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "username": "admin",
+      "password": "$2a$10$WoT3x6Ind7wKOBt8MalzTeq822KTz1ol1KalvGZnkupfCYzy0O2xO",
+      "name": "관리자",
+      "role": "super_admin",
+      "department_id": null,
+      "created_at": "2026-01-29T02:37:03.631Z",
+      "updated_at": "2026-01-29T05:52:16.430Z"
+    },
+    {
+      "id": 2,
+      "username": "gonasoo",
+      "password": "$2a$10$JJIr.Ezcn2k.UwniKrUHyeprgyj9aXAGmfYSqQbgFyWKZFlgfDaVO",
+      "name": "김관수",
+      "role": "teacher",
+      "department_id": null,
+      "created_at": "2026-01-29T04:13:52.415Z",
+      "updated_at": "2026-01-29T04:13:52.415Z"
+    },
+    {
+      "id": 3,
+      "username": "yerin",
+      "password": "$2a$10$2JLtiihls1Jqr1sHZ6KgvuZqUhDH6mLSO9MpqJiUs2HREGBYCjmQy",
+      "name": "정예린",
+      "role": "teacher",
+      "department_id": 3,
+      "created_at": "2026-01-29T06:11:05.607Z",
+      "updated_at": "2026-01-29T06:11:05.607Z"
+    },
+    {
+      "id": 4,
+      "username": "juhye",
+      "password": "$2a$10$FSW4FqOtbqLNbfAB7cb5euZVwyAbxs01EJzgTVwcdHcYDRZKQVDUS",
+      "name": "오주해",
+      "role": "teacher",
+      "department_id": 2,
+      "created_at": "2026-01-29T06:16:12.707Z",
+      "updated_at": "2026-01-29T06:16:12.707Z"
+    }
+  ],
+  "members": [
+    {
+      "id": 4,
+      "name": "김예온",
+      "birth_date": "2017-06-29",
+      "phone": "",
+      "parent_phone": "",
+      "grade": "초4",
+      "department": "어린이부",
+      "department_id": 2,
+      "status": "active",
+      "address": "",
+      "notes": "",
+      "created_at": "2026-01-29T08:48:04.926Z",
+      "updated_at": "2026-01-29T08:48:04.926Z"
+    },
+    {
+      "id": 3,
+      "name": "오석민",
+      "birth_date": "2011-02-17",
+      "phone": "",
+      "parent_phone": "",
+      "grade": "중2",
+      "department": "청소년부",
+      "department_id": 3,
+      "status": "active",
+      "address": "",
+      "notes": "",
+      "created_at": "2026-01-29T07:45:39.370Z",
+      "updated_at": "2026-01-29T10:13:33.956Z"
+    }
+  ],
+  "attendance": [
+    {
+      "id": 1,
+      "member_id": 3,
+      "date": "2026-01-29",
+      "status": "present",
+      "notes": null,
+      "department_id": 3,
+      "created_at": "2026-01-29T08:08:01.496Z",
+      "updated_at": "2026-01-29T10:17:24.504Z"
+    },
+    {
+      "id": 2,
+      "member_id": 4,
+      "date": "2026-01-29",
+      "status": "present",
+      "notes": null,
+      "department_id": 2,
+      "created_at": "2026-01-29T08:48:30.329Z",
+      "updated_at": "2026-01-29T10:17:24.502Z"
+    }
+  ],
+  "worship": [],
+  "meetings": [],
+  "_counters": {
+    "users": 4,
+    "members": 4,
+    "attendance": 2,
+    "worship": 0,
+    "meetings": 0,
+    "departments": 4,
+    "visits": 1
+  },
+  "departments": [
+    {
+      "id": 1,
+      "name": "유아부",
+      "description": "유치부",
+      "age_range": "0-7세",
+      "created_at": "2026-01-29T04:55:55.508Z",
+      "updated_at": "2026-01-29T04:55:55.508Z"
+    },
+    {
+      "id": 2,
+      "name": "어린이부",
+      "description": "초등부",
+      "age_range": "8-13세",
+      "created_at": "2026-01-29T04:55:55.509Z",
+      "updated_at": "2026-01-29T04:55:55.509Z"
+    },
+    {
+      "id": 3,
+      "name": "청소년부",
+      "description": "중고등부",
+      "age_range": "14-19세",
+      "created_at": "2026-01-29T04:55:55.509Z",
+      "updated_at": "2026-01-29T04:55:55.509Z"
+    },
+    {
+      "id": 4,
+      "name": "청년부",
+      "description": "대학/청년",
+      "age_range": "20-30세",
+      "created_at": "2026-01-29T04:55:55.509Z",
+      "updated_at": "2026-01-29T04:55:55.509Z"
+    }
+  ],
+  "visits": [
+    {
+      "id": 1,
+      "member_id": 3,
+      "teacher_id": 3,
+      "date": "2026-01-29",
+      "type": "심방",
+      "content": "성민이 화이팅",
+      "created_at": "2026-01-29T08:13:38.091Z",
+      "updated_at": "2026-01-29T08:13:38.091Z"
+    }
+  ]
+}

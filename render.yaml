@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: youth-church-manager
+    env: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 18.x
+      - key: MONGODB_URI
+        fromGroup: shared-cluster
+        # Or sync manually via dashboard
