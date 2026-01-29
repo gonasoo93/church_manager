@@ -18,6 +18,22 @@ function authenticateToken(req, res, next) {
     });
 }
 
+// 특정 역할 권한 확인 (배열 지원)
+function authorizeRole(roles) {
+    return (req, res, next) => {
+        if (!req.user) {
+            return res.status(401).json({ error: '인증이 필요합니다' });
+        }
+        if (typeof roles === 'string') {
+            roles = [roles];
+        }
+        if (!roles.includes(req.user.role)) {
+            return res.status(403).json({ error: '접근 권한이 없습니다' });
+        }
+        next();
+    };
+}
+
 // 총괄 관리자 권한 확인 미들웨어
 function requireSuperAdmin(req, res, next) {
     if (req.user.role !== 'super_admin') {
@@ -61,7 +77,7 @@ function checkDepartmentAccess(req, res, next) {
 
 // 교사 이상 권한 확인
 function requireTeacher(req, res, next) {
-    if (['super_admin', 'department_admin', 'teacher'].includes(req.user.role)) {
+    if (['super_admin', 'department_admin', 'teacher', 'admin'].includes(req.user.role)) {
         return next();
     }
     return res.status(403).json({ error: '접근 권한이 없습니다' });
@@ -69,6 +85,7 @@ function requireTeacher(req, res, next) {
 
 module.exports = {
     authenticateToken,
+    authorizeRole,
     requireAdmin,
     requireSuperAdmin,
     requireDepartmentAdmin,
