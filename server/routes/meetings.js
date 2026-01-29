@@ -1,9 +1,9 @@
 const express = require('express');
-const { query } = require('../config/db');
+const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
-
-const router = express.Router();
+const Meeting = require('../models/Meeting');
+const Counter = require('../models/Counter');
 
 // 모든 라우트에 인증 필요
 router.use(authenticateToken);
@@ -15,21 +15,16 @@ if (process.env.GEMINI_API_KEY) {
 }
 
 // 회의 기록 목록 조회
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        let meetings = query.all('meetings');
-
-        // 부서 필터링 (총괄 관리자가 아니면 자신의 부서만)
+        let query = {};
         if (req.user.role !== 'super_admin' && req.user.department_id) {
-            meetings = meetings.filter(m => m.department_id === req.user.department_id);
+            query.department_id = req.user.department_id;
         }
 
-        meetings.sort((a, b) => {
-            const dateCompare = b.date.localeCompare(a.date);
-            if (dateCompare !== 0) return dateCompare;
-            return (b.time || '').localeCompare(a.time || '');
-        });
-        res.json(meetings);
+        const meetings = await Meeting.find(query).sort({ date: -1, time: -1 });
+        const result = meetings.map(m => ({ ...m.toObject(), id: m._id }));
+        res.json(result);
     } catch (error) {
         console.error('회의 기록 조회 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다' });
@@ -37,29 +32,72 @@ router.get('/', (req, res) => {
 });
 
 // 회의 기록 상세 조회
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
     try {
-        const meeting = query.get('meetings', req.params.id);
+        const meeting = await Meeting.findById(req.params.id);
         if (!meeting) {
             return res.status(404).json({ error: '해당 회의 기록을 찾을 수 없습니다' });
         }
 
-        // 권한 확인
         if (req.user.role !== 'super_admin' && req.user.department_id && meeting.department_id !== req.user.department_id) {
             return res.status(403).json({ error: '해당 회의 기록에 접근 권한이 없습니다' });
         }
 
-        res.json(meeting);
+        res.json({ ...meeting.toObject(), id: meeting._id });
     } catch (error) {
         console.error('회의 기록 상세 조회 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다' });
     }
 });
 
-// ... AI 요약 (중간 생략) ...
+// AI 요약 생성
+router.post('/summarize', async (req, res) => {
+    try {
+        const { content } = req.body;
+        if (!content) {
+            return res.status(400).json({ error: '회의 내용이 없습니다' });
+        }
+
+        if (!genAI) {
+            return res.status(503).json({ error: 'AI 서비스가 설정되지 않았습니다 (API 키 누락)' });
+        }
+
+        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+        const prompt = `
+            다음은 청소년교회 회의록 내용입니다. 이 내용을 분석하여 다음 JSON 형식으로 요약해주세요:
+            
+            회의 내용:
+            ${content}
+
+            응답 형식 (JSON):
+            {
+                "summary": "전체 회의 내용을 2-3문장으로 요약",
+                "discussions": ["주요 논의사항1", "주요 논의사항2", ...],
+                "decisions": ["결정사항1", "결정사항2", ...],
+                "actions": ["실행계획1", "실행계획2", ...]
+            }
+        `;
+
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+
+        // JSON 파싱 (마크다운 코드 블록 제거)
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        const summaryData = JSON.parse(jsonStr);
+
+        res.json(summaryData);
+
+    } catch (error) {
+        console.error('AI 요약 오류:', error);
+        res.status(500).json({ error: 'AI 요약 중 오류가 발생했습니다', details: error.message });
+    }
+});
+
 
 // 회의 기록 등록
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     try {
         const { title, date, time, attendees, content, decisions, next_meeting, department_id } = req.body;
 
@@ -67,17 +105,16 @@ router.post('/', (req, res) => {
             return res.status(400).json({ error: '제목과 날짜는 필수입니다' });
         }
 
-        // 부서 ID 설정
         let targetDeptId = department_id;
         if (req.user.role !== 'super_admin') {
             targetDeptId = req.user.department_id;
         }
+        if (!targetDeptId) targetDeptId = 3;
 
-        if (!targetDeptId) {
-            targetDeptId = 3; // 기본값
-        }
+        const counter = await Counter.findByIdAndUpdate('meetings', { $inc: { seq: 1 } }, { new: true, upsert: true });
 
-        const meeting = query.insert('meetings', {
+        const meeting = await Meeting.create({
+            _id: counter.seq,
             title,
             date,
             time,
@@ -89,7 +126,7 @@ router.post('/', (req, res) => {
         });
 
         res.status(201).json({
-            id: meeting.id,
+            id: meeting._id,
             message: '회의 기록이 등록되었습니다'
         });
     } catch (error) {
@@ -99,29 +136,29 @@ router.post('/', (req, res) => {
 });
 
 // 회의 기록 수정
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
     try {
-        // 먼저 기존 기록 확인 (권한 체크)
-        const existing = query.get('meetings', req.params.id);
-        if (!existing) {
+        const meeting = await Meeting.findById(req.params.id);
+        if (!meeting) {
             return res.status(404).json({ error: '해당 회의 기록을 찾을 수 없습니다' });
         }
 
-        if (req.user.role !== 'super_admin' && req.user.department_id && existing.department_id !== req.user.department_id) {
+        if (req.user.role !== 'super_admin' && req.user.department_id && meeting.department_id !== req.user.department_id) {
             return res.status(403).json({ error: '수정 권한이 없습니다' });
         }
 
         const { title, date, time, attendees, content, decisions, next_meeting } = req.body;
 
-        const updated = query.update('meetings', req.params.id, {
-            title,
-            date,
-            time,
-            attendees,
-            content,
-            decisions,
-            next_meeting
-        });
+        meeting.title = title;
+        meeting.date = date;
+        meeting.time = time;
+        meeting.attendees = attendees;
+        meeting.content = content;
+        meeting.decisions = decisions;
+        meeting.next_meeting = next_meeting;
+        meeting.updated_at = Date.now();
+
+        await meeting.save();
 
         res.json({ message: '회의 기록이 수정되었습니다' });
     } catch (error) {
@@ -131,9 +168,9 @@ router.put('/:id', (req, res) => {
 });
 
 // 회의 기록 삭제
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
     try {
-        query.delete('meetings', req.params.id);
+        await Meeting.findByIdAndDelete(req.params.id);
         res.json({ message: '회의 기록이 삭제되었습니다' });
     } catch (error) {
         console.error('회의 기록 삭제 오류:', error);
