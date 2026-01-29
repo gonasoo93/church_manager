@@ -41,15 +41,16 @@ async function initData() {
         const deptCount = await Department.countDocuments();
         if (deptCount === 0) {
             const depts = [
-                { _id: 1, name: '교역자' },
+                { _id: 1, name: '유아부' },
                 { _id: 2, name: '어린이부' },
                 { _id: 3, name: '청소년부' },
-                { _id: 4, name: '청년부' }
+                { _id: 4, name: '청년부' },
+                { _id: 5, name: '교역자' }
             ];
             await Department.insertMany(depts);
 
             // Counter update
-            await Counter.findByIdAndUpdate('departments', { seq: 4 }, { upsert: true });
+            await Counter.findByIdAndUpdate('departments', { seq: 5 }, { upsert: true });
 
             console.log('✅ 기본 부서 생성 완료');
         }
@@ -93,6 +94,18 @@ app.use('/api/members', require('./routes/members'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/worship', require('./routes/worship'));
 app.use('/api/visits', require('./routes/visits'));
+
+// 데이터 시딩 엔드포인트 (임시)
+app.get('/seed-data', async (req, res) => {
+    try {
+        const importData = require('./scripts/seed');
+        const result = await importData(false); // false = do not exit process
+        res.json(result);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // API 경로에 대한 404 처리 (HTML 대신 JSON 반환)
 app.use('/api/*', (req, res) => {

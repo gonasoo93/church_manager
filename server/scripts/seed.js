@@ -11,45 +11,39 @@ const Attendance = require('../models/Attendance');
 const Visit = require('../models/Visit');
 const Worship = require('../models/Worship');
 const Counter = require('../models/Counter');
+const Meeting = require('../models/Meeting');
 
-// DB Connection
-const connectDB = async () => {
+// 이 함수가 외부에서 호출될 때 DB 연결은 이미 되어 있다고 가정하거나 체크
+const importData = async (isStandalone = false) => {
     try {
-        await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/youth-church');
-        console.log('MongoDB Connected');
-    } catch (error) {
-        console.error('MongoDB Connection Error:', error);
-        process.exit(1);
-    }
-};
-
-const importData = async () => {
-    try {
-        await connectDB();
+        if (isStandalone) {
+            await mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/youth-church');
+            console.log('MongoDB Connected');
+        }
 
         // Load JSON data
         const dbPath = path.join(__dirname, '../../data/database.json');
         if (!fs.existsSync(dbPath)) {
             console.error('database.json not found');
-            process.exit(1);
+            if (isStandalone) process.exit(1);
+            return { success: false, message: 'database.json not found' };
         }
         const data = JSON.parse(fs.readFileSync(dbPath, 'utf8'));
+
+        /* 데이터 삭제 및 재생성 */
 
         // 1. Departments
         if (data.departments && data.departments.length > 0) {
             await Department.deleteMany({});
             const depts = data.departments.map(d => ({ ...d, _id: d.id }));
             await Department.insertMany(depts);
-            console.log('Departments Imported');
         }
 
-        // 2. Users ( legacy role adjustment handled in app? or here?)
+        // 2. Users
         if (data.users && data.users.length > 0) {
             await User.deleteMany({});
             const users = data.users.map(u => ({ ...u, _id: u.id, role: u.role === 'admin' ? 'super_admin' : u.role }));
-            // Password hashing is typically already done in JSON
             await User.insertMany(users);
-            console.log('Users Imported');
         }
 
         // 3. Members
@@ -57,18 +51,13 @@ const importData = async () => {
             await Member.deleteMany({});
             const members = data.members.map(m => ({ ...m, _id: m.id }));
             await Member.insertMany(members);
-            console.log('Members Imported');
         }
 
         // 4. Attendance
         if (data.attendance && data.attendance.length > 0) {
             await Attendance.deleteMany({});
-            // Attendance might not have id in JSON if it was array of objects without id management?
-            // Checking db.js logic: insert creates id using counter.
-            // So attendance records should have ids.
             const atts = data.attendance.map(a => ({ ...a, _id: a.id }));
             await Attendance.insertMany(atts);
-            console.log('Attendance Imported');
         }
 
         // 5. Visits
@@ -76,18 +65,23 @@ const importData = async () => {
             await Visit.deleteMany({});
             const visits = data.visits.map(v => ({ ...v, _id: v.id }));
             await Visit.insertMany(visits);
-            console.log('Visits Imported');
         }
 
-        // 6. Worship (if exists)
+        // 6. Worship
         if (data.worship && data.worship.length > 0) {
             await Worship.deleteMany({});
             const worships = data.worship.map(w => ({ ...w, _id: w.id }));
             await Worship.insertMany(worships);
-            console.log('Worship Imported');
         }
 
-        // 7. Counters
+        // 7. Meetings
+        if (data.meetings && data.meetings.length > 0) {
+            await Meeting.deleteMany({});
+            const meetings = data.meetings.map(m => ({ ...m, _id: m.id }));
+            await Meeting.insertMany(meetings);
+        }
+
+        // 8. Counters
         if (data._counters) {
             await Counter.deleteMany({});
             const counters = Object.keys(data._counters).map(key => ({
@@ -95,15 +89,22 @@ const importData = async () => {
                 seq: data._counters[key]
             }));
             await Counter.insertMany(counters);
-            console.log('Counters Imported');
         }
 
         console.log('Data Import Completed!');
-        process.exit();
+        if (isStandalone) process.exit();
+        return { success: true, message: 'Data Imported Successfully' };
+
     } catch (error) {
         console.error('Error with data import:', error);
-        process.exit(1);
+        if (isStandalone) process.exit(1);
+        throw error;
     }
 };
 
-importData();
+// 직접 실행 시
+if (require.main === module) {
+    importData(true);
+}
+
+module.exports = importData;
