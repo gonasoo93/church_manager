@@ -91,6 +91,22 @@ const importData = async (isStandalone = false) => {
             await Counter.insertMany(counters);
         }
 
+        /* [추가] 부서 데이터 보정 (유아부/교역자) */
+        // 1. ID 1번이 '교역자'로 잘못되어 있거나 '유아부'라면 확실하게 '유아부'로 설정
+        await Department.findByIdAndUpdate(1, { name: '유아부', description: '0-7세' }, { upsert: true });
+
+        // 2. ID 5번 '교역자' 부서가 없으면 추가
+        const ministry = await Department.findById(5);
+        if (!ministry) {
+            await Department.create({ _id: 5, name: '교역자', description: '교역자 및 부장' });
+            // 카운터도 5로 업데이트 (현재 값이 5보다 작다면)
+            const deptCounter = await Counter.findById('departments');
+            if (!deptCounter || deptCounter.seq < 5) {
+                await Counter.findByIdAndUpdate('departments', { seq: 5 }, { upsert: true });
+            }
+        }
+        /* ------------------------------------- */
+
         console.log('Data Import Completed!');
         if (isStandalone) process.exit();
         return { success: true, message: 'Data Imported Successfully' };

@@ -94,6 +94,7 @@ app.use('/api/members', require('./routes/members'));
 app.use('/api/attendance', require('./routes/attendance'));
 app.use('/api/worship', require('./routes/worship'));
 app.use('/api/visits', require('./routes/visits'));
+app.use('/api/meetings', require('./routes/meetings'));
 
 // 데이터 시딩 엔드포인트 (임시)
 app.get('/seed-data', async (req, res) => {
