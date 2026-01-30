@@ -22,10 +22,16 @@ async function initMembers() {
   view.innerHTML = `
     <div class="view-header">
       <h2>명부 관리</h2>
-      <button class="btn btn-primary" id="add-member-btn">
-        <span>➕</span>
-        <span>${deptName} 등록</span>
-      </button>
+      <div style="display: flex; gap: 0.5rem;">
+        <button class="btn btn-secondary" id="export-members-btn">
+          <span>📥</span>
+          <span>Excel 내보내기</span>
+        </button>
+        <button class="btn btn-primary" id="add-member-btn">
+          <span>➕</span>
+          <span>${deptName} 등록</span>
+        </button>
+      </div>
     </div>
     <div class="card">
       <div class="form-group" style="display: flex; gap: 0.5rem;">
@@ -55,6 +61,7 @@ async function initMembers() {
 
   // 이벤트 리스너
   document.getElementById('add-member-btn').addEventListener('click', () => showMemberForm());
+  document.getElementById('export-members-btn').addEventListener('click', exportMembersToExcel);
   document.getElementById('member-search').addEventListener('input', filterMembers);
 
   // 부서 필터 리스너 (총괄 관리자용)
@@ -511,3 +518,34 @@ async function showMemberDetail(id) {
 
 // 전역 스코프에 함수 노출 (onclick 핸들러용)
 window.showMemberDetail = showMemberDetail;
+
+// Excel 내보내기 함수
+async function exportMembersToExcel() {
+  try {
+    const response = await fetch('/api/export/members', {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('내보내기 실패');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `명부_${new Date().toISOString().split('T')[0]}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    alert('명부가 Excel 파일로 내보내졌습니다.');
+  } catch (error) {
+    console.error('내보내기 오류:', error);
+    alert('내보내기에 실패했습니다.');
+  }
+}
+

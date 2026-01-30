@@ -8,6 +8,9 @@ const visitSchema = new mongoose.Schema({
     date: { type: String, required: true },
     type: String, // 심방, 전화, 문자 등
     content: String,
+    next_visit_date: { type: String },
+    template_id: { type: Number },
+    priority: { type: String, enum: ['low', 'medium', 'high'], default: 'medium' },
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now }
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });

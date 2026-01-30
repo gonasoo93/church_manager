@@ -111,6 +111,9 @@ function showView(viewName) {
         'attendance': initAttendance,
         'worship': initWorship,
         'meetings': initMeetings,
+        'announcements': initAnnouncements,
+        'groups': initGroups,
+        'events': initEvents,
         'admin': initAdmin,
         'profile': initProfile
     };

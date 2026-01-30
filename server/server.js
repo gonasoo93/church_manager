@@ -92,8 +92,14 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/departments', require('./routes/departments'));
 app.use('/api/members', require('./routes/members'));
 app.use('/api/attendance', require('./routes/attendance'));
+app.use('/api/attendance', require('./routes/attendance-analytics'));
 app.use('/api/worship', require('./routes/worship'));
 app.use('/api/visits', require('./routes/visits'));
+app.use('/api/visits', require('./routes/visit-enhancements'));
+app.use('/api/announcements', require('./routes/announcements'));
+app.use('/api/search', require('./routes/search'));
+app.use('/api/export', require('./routes/export'));
+app.use('/api/features', require('./routes/features'));
 app.use('/api/meetings', require('./routes/meetings'));
 
 // 데이터 시딩 엔드포인트 (임시)

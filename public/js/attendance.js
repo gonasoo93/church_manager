@@ -33,6 +33,10 @@ async function initAttendance() {
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
         <h3>출석 통계</h3>
         <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-sm btn-secondary" id="export-attendance-btn">
+            <span>📥</span>
+            <span>Excel 내보내기</span>
+          </button>
           ${deptFilterHtml}
           <select id="stats-period" class="form-group" style="margin: 0; padding: 0.5rem;">
             <option value="month">최근 1개월</option>
@@ -118,6 +122,7 @@ async function initAttendance() {
     }
     loadAttendanceStats();
   });
+  document.getElementById('export-attendance-btn').addEventListener('click', exportAttendanceToExcel);
   document.getElementById('stats-status').addEventListener('change', loadAttendanceStats);
   document.getElementById('stats-member').addEventListener('change', loadAttendanceStats);
   document.getElementById('stats-start-date').addEventListener('change', loadAttendanceStats);
@@ -127,6 +132,11 @@ async function initAttendance() {
   await loadAttendanceForDate();
   await loadMembersForFilter();
   await loadAttendanceStats();
+
+  // 대시보드 초기화 (attendance-dashboard.js에서 정의됨)
+  if (typeof initDashboard === 'function') {
+    await initDashboard();
+  }
 }
 
 // 필터용 학생 목록 로드
@@ -461,5 +471,37 @@ async function loadAttendanceStats() {
 
   } catch (error) {
     console.error('통계 로드 오류:', error);
+  }
+}
+
+// Excel 내보내기 함수
+async function exportAttendanceToExcel() {
+  try {
+    const { startDate, endDate } = getStatsDateRange();
+
+    const response = await fetch(`/api/export/attendance?startDate=${startDate}&endDate=${endDate}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('내보내기 실패');
+    }
+
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `출석부_${startDate}_${endDate}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+
+    alert('출석부가 Excel 파일로 내보내졌습니다.');
+  } catch (error) {
+    console.error('내보내기 오류:', error);
+    alert('내보내기에 실패했습니다.');
   }
 }

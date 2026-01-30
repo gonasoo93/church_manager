@@ -84,9 +84,16 @@ router.get('/me', authenticateToken, async (req, res) => {
 });
 
 // 사용자 목록 조회 (관리자용)
-router.get('/users', authenticateToken, authorizeRole(['super_admin', 'admin']), async (req, res) => {
+router.get('/users', authenticateToken, authorizeRole(['super_admin', 'department_admin']), async (req, res) => {
     try {
-        const users = await User.find().select('-password').sort({ created_at: -1 });
+        let query = {};
+
+        // 부서 관리자는 자기 부서만 조회
+        if (req.user.role === 'department_admin') {
+            query.department_id = req.user.department_id;
+        }
+
+        const users = await User.find(query).select('-password').sort({ created_at: -1 });
         const result = users.map(u => ({ ...u.toObject(), id: u._id }));
         res.json(result);
     } catch (error) {
@@ -95,12 +102,24 @@ router.get('/users', authenticateToken, authorizeRole(['super_admin', 'admin']),
 });
 
 // 사용자 추가 (관리자용)
-router.post('/users', authenticateToken, authorizeRole(['super_admin', 'admin']), async (req, res) => {
+router.post('/users', authenticateToken, authorizeRole(['super_admin', 'department_admin']), async (req, res) => {
     try {
         const { username, password, name, role, department_id, assigned_grade, assigned_group } = req.body;
 
         if (!username || !password || !name) {
             return res.status(400).json({ error: '필수 정보를 입력해주세요' });
+        }
+
+        // 부서 관리자 권한 검증
+        if (req.user.role === 'department_admin') {
+            // 부서 ID가 없거나 자기 부서가 아니면 거부
+            if (!department_id || parseInt(department_id) !== req.user.department_id) {
+                return res.status(403).json({ error: '자신의 부서에만 사용자를 추가할 수 있습니다' });
+            }
+            // 부서 관리자는 teacher 역할만 추가 가능
+            if (role && role !== 'teacher') {
+                return res.status(403).json({ error: '교사 역할만 추가할 수 있습니다' });
+            }
         }
 
         const exists = await User.findOne({ username });
@@ -172,7 +191,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
 });
 
 // 사용자 수정 (관리자용)
-router.put('/users/:id', authenticateToken, authorizeRole(['super_admin', 'admin']), async (req, res) => {
+router.put('/users/:id', authenticateToken, authorizeRole(['super_admin', 'department_admin']), async (req, res) => {
     try {
         const { id } = req.params;
         const { name, role, department_id, assigned_grade, assigned_group, password } = req.body;
@@ -180,6 +199,22 @@ router.put('/users/:id', authenticateToken, authorizeRole(['super_admin', 'admin
         const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+        }
+
+        // 부서 관리자 권한 검증
+        if (req.user.role === 'department_admin') {
+            // 자기 부서 사용자만 수정 가능
+            if (user.department_id !== req.user.department_id) {
+                return res.status(403).json({ error: '자신의 부서 사용자만 수정할 수 있습니다' });
+            }
+            // 부서 변경 불가
+            if (department_id && parseInt(department_id) !== req.user.department_id) {
+                return res.status(403).json({ error: '다른 부서로 이동할 수 없습니다' });
+            }
+            // 역할 변경 불가 (teacher만 유지)
+            if (role && role !== 'teacher') {
+                return res.status(403).json({ error: '역할을 변경할 수 없습니다' });
+            }
         }
 
         user.name = name;
@@ -201,11 +236,23 @@ router.put('/users/:id', authenticateToken, authorizeRole(['super_admin', 'admin
 });
 
 // 사용자 삭제 (관리자용)
-router.delete('/users/:id', authenticateToken, authorizeRole(['super_admin', 'admin']), async (req, res) => {
+router.delete('/users/:id', authenticateToken, authorizeRole(['super_admin', 'department_admin']), async (req, res) => {
     try {
         const id = parseInt(req.params.id);
         if (id === req.user.id) {
             return res.status(400).json({ error: '자기 자신은 삭제할 수 없습니다' });
+        }
+
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ error: '사용자를 찾을 수 없습니다' });
+        }
+
+        // 부서 관리자는 자기 부서 사용자만 삭제 가능
+        if (req.user.role === 'department_admin') {
+            if (user.department_id !== req.user.department_id) {
+                return res.status(403).json({ error: '자신의 부서 사용자만 삭제할 수 있습니다' });
+            }
         }
 
         await User.findByIdAndDelete(id);

@@ -40,16 +40,24 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
 
         const visits = await Visit.find(query)
             .sort({ date: -1 })
-            .populate('member_id', 'name')
+            .populate('member_id', 'name department_id')
             .populate('teacher_id', 'name');
+
+        // 부서 정보 조회
+        const Department = require('../models/Department');
+        const departments = await Department.find();
+        const deptMap = {};
+        departments.forEach(d => deptMap[d._id] = d.name);
 
         const result = visits.map(v => {
             const doc = v.toObject();
+            const memberDeptId = doc.member_id ? doc.member_id.department_id : null;
             return {
                 ...doc,
                 id: doc._id,
                 member_name: doc.member_id ? doc.member_id.name : '알 수 없음',
-                teacher_name: doc.teacher_id ? doc.teacher_id.name : '알 수 없음'
+                teacher_name: doc.teacher_id ? doc.teacher_id.name : '알 수 없음',
+                department_name: memberDeptId ? (deptMap[memberDeptId] || '-') : '-'
             };
         });
 

@@ -268,8 +268,27 @@ async function showUserForm() { // async 추가
     }
   });
 
-  // 초기 상태 설정 (기본이 user이므로 표시)
-  deptGroup.style.display = 'block';
+  // 부서 관리자 권한 제한
+  const currentUser = JSON.parse(localStorage.getItem('user'));
+  if (currentUser && currentUser.role === 'department_admin') {
+    // 역할 선택 비활성화 (teacher 고정)
+    roleSelect.value = 'teacher';
+    roleSelect.disabled = true;
+
+    // 부서 선택 비활성화 (자기 부서 고정)
+    const deptSelect = modal.querySelector('#user-dept');
+    deptSelect.value = currentUser.department_id;
+    deptSelect.disabled = true;
+
+    // 부서 선택 표시
+    deptGroup.style.display = 'block';
+    // 담당 정보 표시 (교사이므로)
+    assignmentGroup.style.display = 'block';
+  } else {
+    // 초기 상태 설정 (기본이 teacher이므로 표시)
+    deptGroup.style.display = 'block';
+  }
+
 
   modal.querySelector('[data-action="cancel"]').addEventListener('click', () => {
     closeModal(modal);
@@ -372,19 +391,6 @@ async function loadAllVisitsFiltered(deptId) {
 
     const visits = await apiRequest(url);
 
-    const members = await apiRequest('/members');
-    const deptMap = {};
-    const depts = await apiRequest('/departments');
-    depts.forEach(d => {
-      const id = d.id || d._id;
-      deptMap[id] = d.name;
-    });
-
-    const memberDeptMap = {};
-    members.forEach(m => {
-      memberDeptMap[m.id] = deptMap[m.department_id] || '-';
-    });
-
     if (visits.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="text-center">기록이 없습니다</td></tr>';
       return;
@@ -393,7 +399,7 @@ async function loadAllVisitsFiltered(deptId) {
     tbody.innerHTML = visits.map(v => `
             <tr>
                 <td>${formatDate(v.date)}</td>
-                <td><span class="badge" style="background:var(--bg-tertiary); padding: 2px 6px; border-radius:4px; font-size:0.8em;">${memberDeptMap[v.member_id] || '-'}</span></td>
+                <td><span class="badge" style="background:var(--bg-tertiary); padding: 2px 6px; border-radius:4px; font-size:0.8em;">${v.department_name || '-'}</span></td>
                 <td><strong>${v.member_name}</strong></td>
                 <td>${v.teacher_name}</td>
                 <td>${v.type}</td>
