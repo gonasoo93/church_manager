@@ -46,7 +46,7 @@ router.get('/:id', async (req, res) => {
 // 예배 일지 등록
 router.post('/', async (req, res) => {
     try {
-        const { date, title, preacher, scripture, content, attendance_count, offering, notes, department_id } = req.body;
+        const { date, time, title, preacher, scripture, content, worship_songs, special_events, attendance_count, offering, notes, department_id } = req.body;
 
         if (!date || !title) {
             return res.status(400).json({ error: '날짜와 제목은 필수입니다' });
@@ -63,10 +63,13 @@ router.post('/', async (req, res) => {
         const worship = await Worship.create({
             _id: counter.seq,
             date,
+            time,
             title,
             preacher,
             scripture,
             content,
+            worship_songs,
+            special_events,
             attendance_count: attendance_count || 0,
             offering: offering || 0,
             notes,
@@ -95,13 +98,16 @@ router.put('/:id', async (req, res) => {
             return res.status(403).json({ error: '수정 권한이 없습니다' });
         }
 
-        const { date, title, preacher, scripture, content, attendance_count, offering, notes } = req.body;
+        const { date, time, title, preacher, scripture, content, worship_songs, special_events, attendance_count, offering, notes } = req.body;
 
         worship.date = date;
+        worship.time = time;
         worship.title = title;
         worship.preacher = preacher;
         worship.scripture = scripture;
         worship.content = content;
+        worship.worship_songs = worship_songs;
+        worship.special_events = special_events;
         worship.attendance_count = attendance_count;
         worship.offering = offering;
         worship.notes = notes;
