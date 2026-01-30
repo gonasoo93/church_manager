@@ -70,7 +70,7 @@ async function loadMeetings() {
     const department_id = deptSelect ? deptSelect.value : null;
 
     let url = '/meetings';
-    if (department_id && department_id !== 'all') {
+    if (department_id && department_id !== 'all' && department_id !== 'undefined') {
       url += `?department_id=${department_id}`;
     }
 

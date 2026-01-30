@@ -104,39 +104,83 @@ async function initAdmin() {
 // 사용자 목록 로드
 async function loadUsers() {
   try {
-    const users = await apiRequest('/auth/users');
-    renderUsers(users);
+    const [users, departments] = await Promise.all([
+      apiRequest('/auth/users'),
+      apiRequest('/departments')
+    ]);
+    renderUsers(users, departments);
   } catch (error) {
     console.error('사용자 목록 로드 오류:', error);
   }
 }
 
 // 사용자 목록 렌더링
-function renderUsers(users) {
+function renderUsers(users, departments) {
   const tbody = document.getElementById('users-table-body');
 
+  // 부서 ID -> 이름 매핑 생성
+  const deptMap = {};
+  if (departments) {
+    departments.forEach(d => {
+      const id = d.id || d._id;
+      deptMap[id] = d.name;
+    });
+  }
+
   if (users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5" class="text-center">사용자가 없습니다</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="text-center">사용자가 없습니다</td></tr>';
     return;
   }
 
-  tbody.innerHTML = users.map(user => `
+  tbody.innerHTML = users.map(user => {
+    // 역할 한글 명칭
+    let roleName = '교사';
+    let badgeColor = 'var(--bg-tertiary)';
+    let textColor = 'var(--text-primary)';
+
+    if (user.role === 'super_admin') {
+      roleName = '총괄 관리자';
+      badgeColor = '#667eea';
+      textColor = 'white';
+    } else if (user.role === 'department_admin') {
+      roleName = '부서 관리자';
+      badgeColor = 'var(--primary)';
+      textColor = 'white';
+    }
+
+    // 담당 정보 구성 (부서명 + 학년/반)
+    let assignment = '-';
+
+    if (user.role === 'super_admin') {
+      assignment = '전체 관리';
+    } else if (user.role === 'department_admin') {
+      // 부서 관리자는 해당 부서 표시
+      const deptName = deptMap[user.department_id] || '미배정';
+      assignment = `<span class="badge">${deptName}</span>`;
+    } else {
+      // 교사는 부서 + 학년/반
+      const deptName = deptMap[user.department_id] || '';
+      const gradeGroup = user.assigned_grade ? user.assigned_grade + (user.assigned_group ? ' ' + user.assigned_group : '') : '';
+
+      if (deptName && gradeGroup) {
+        assignment = `${deptName} | ${gradeGroup}`;
+      } else if (deptName) {
+        assignment = deptName;
+      } else if (gradeGroup) {
+        assignment = gradeGroup;
+      }
+    }
+
+    return `
     <tr>
       <td><strong>${user.username}</strong></td>
       <td>${user.name}</td>
       <td>
-        <span style="padding: 0.25rem 0.75rem; background: ${user.role === 'super_admin' ? '#667eea' :
-      user.role === 'department_admin' ? 'var(--primary)' :
-        'var(--bg-tertiary)'
-    }; color: ${user.role === 'super_admin' || user.role === 'department_admin' ? 'white' : 'var(--text-primary)'
-    }; border-radius: var(--radius-sm); font-size: 0.875rem;">
-          ${user.role === 'super_admin' ? '총괄 관리자' :
-      user.role === 'department_admin' ? '부서 관리자' :
-        '일반 사용자'
-    }
+        <span style="padding: 0.25rem 0.75rem; background: ${badgeColor}; color: ${textColor}; border-radius: var(--radius-sm); font-size: 0.875rem;">
+          ${roleName}
         </span>
       </td>
-      <td>${user.assigned_grade ? user.assigned_grade + (user.assigned_group ? ' ' + user.assigned_group : '') : '-'}</td>
+      <td>${assignment}</td>
       <td>${formatDate(user.created_at)}</td>
       <td>
         ${user.id !== state.user.id ? `
@@ -144,7 +188,7 @@ function renderUsers(users) {
         ` : '<span style="color: var(--text-muted);">본인</span>'}
       </td>
     </tr>
-  `).join('');
+  `}).join('');
 }
 
 // 사용자 추가 폼
@@ -331,7 +375,10 @@ async function loadAllVisitsFiltered(deptId) {
     const members = await apiRequest('/members');
     const deptMap = {};
     const depts = await apiRequest('/departments');
-    depts.forEach(d => deptMap[d.id] = d.name);
+    depts.forEach(d => {
+      const id = d.id || d._id;
+      deptMap[id] = d.name;
+    });
 
     const memberDeptMap = {};
     members.forEach(m => {

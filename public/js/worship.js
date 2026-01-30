@@ -72,7 +72,7 @@ async function loadWorship() {
     const department_id = deptSelect ? deptSelect.value : null;
 
     let url = '/worship';
-    if (department_id && department_id !== 'all') {
+    if (department_id && department_id !== 'all' && department_id !== 'undefined') {
       url += `?department_id=${department_id}`;
     }
 

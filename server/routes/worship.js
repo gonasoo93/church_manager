@@ -13,7 +13,7 @@ router.get('/', async (req, res) => {
         let query = {};
 
         // 검색 조건 (department_id)
-        if (req.query.department_id && req.query.department_id !== 'all') {
+        if (req.query.department_id && req.query.department_id !== 'all' && req.query.department_id !== 'undefined') {
             query.department_id = req.query.department_id;
         }
 
