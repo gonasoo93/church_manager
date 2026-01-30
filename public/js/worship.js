@@ -2,6 +2,18 @@
 async function initWorship() {
   const view = document.getElementById('worship-view');
 
+  // 부서 선택 필터 UI (총괄 관리자용)
+  let deptFilterHtml = '';
+  if (state.user.role === 'super_admin') {
+    deptFilterHtml = `
+          <div style="flex: 1; max-width: 200px;">
+              <select id="worship-department-filter" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                <option value="all">전체 부서</option>
+              </select>
+          </div>
+      `;
+  }
+
   view.innerHTML = `
     <div class="view-header">
       <h2>예배 기록</h2>
@@ -11,6 +23,7 @@ async function initWorship() {
       </button>
     </div>
     <div class="card">
+      ${deptFilterHtml ? `<div style="margin-bottom: 1rem;">${deptFilterHtml}</div>` : ''}
       <div class="table-container">
         <table>
           <thead>
@@ -32,13 +45,38 @@ async function initWorship() {
   `;
 
   document.getElementById('add-worship-btn').addEventListener('click', () => showWorshipForm());
+
+  // 부서 필터 리스너 (총괄 관리자용)
+  const deptSelect = document.getElementById('worship-department-filter');
+  if (deptSelect) {
+    try {
+      const departments = await apiRequest('/departments');
+      departments.forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept.id;
+        option.textContent = dept.name;
+        deptSelect.appendChild(option);
+      });
+    } catch (e) { console.error('부서 로드 실패', e); }
+
+    deptSelect.addEventListener('change', loadWorship);
+  }
+
   await loadWorship();
 }
 
 // 예배 기록 로드
 async function loadWorship() {
   try {
-    const worship = await apiRequest('/worship');
+    const deptSelect = document.getElementById('worship-department-filter');
+    const department_id = deptSelect ? deptSelect.value : null;
+
+    let url = '/worship';
+    if (department_id && department_id !== 'all') {
+      url += `?department_id=${department_id}`;
+    }
+
+    const worship = await apiRequest(url);
     renderWorship(worship);
   } catch (error) {
     console.error('예배 기록 로드 오류:', error);

@@ -2,6 +2,18 @@
 async function initMeetings() {
   const view = document.getElementById('meetings-view');
 
+  // 부서 선택 필터 UI (총괄 관리자용)
+  let deptFilterHtml = '';
+  if (state.user.role === 'super_admin') {
+    deptFilterHtml = `
+          <div style="flex: 1; max-width: 200px;">
+              <select id="meeting-department-filter" style="width: 100%; padding: 0.5rem; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--bg-tertiary); color: var(--text-primary);">
+                <option value="all">전체 부서</option>
+              </select>
+          </div>
+      `;
+  }
+
   view.innerHTML = `
     <div class="view-header">
       <h2>회의 기록</h2>
@@ -11,6 +23,7 @@ async function initMeetings() {
       </button>
     </div>
     <div class="card">
+      ${deptFilterHtml ? `<div style="margin-bottom: 1rem;">${deptFilterHtml}</div>` : ''}
       <div class="table-container">
         <table>
           <thead>
@@ -30,13 +43,38 @@ async function initMeetings() {
   `;
 
   document.getElementById('add-meeting-btn').addEventListener('click', () => showMeetingForm());
+
+  // 부서 필터 리스너 (총괄 관리자용)
+  const deptSelect = document.getElementById('meeting-department-filter');
+  if (deptSelect) {
+    try {
+      const departments = await apiRequest('/departments');
+      departments.forEach(dept => {
+        const option = document.createElement('option');
+        option.value = dept.id;
+        option.textContent = dept.name;
+        deptSelect.appendChild(option);
+      });
+    } catch (e) { console.error('부서 로드 실패', e); }
+
+    deptSelect.addEventListener('change', loadMeetings);
+  }
+
   await loadMeetings();
 }
 
 // 회의 기록 로드
 async function loadMeetings() {
   try {
-    const meetings = await apiRequest('/meetings');
+    const deptSelect = document.getElementById('meeting-department-filter');
+    const department_id = deptSelect ? deptSelect.value : null;
+
+    let url = '/meetings';
+    if (department_id && department_id !== 'all') {
+      url += `?department_id=${department_id}`;
+    }
+
+    const meetings = await apiRequest(url);
     renderMeetings(meetings);
   } catch (error) {
     console.error('회의 기록 로드 오류:', error);

@@ -11,7 +11,14 @@ router.use(authenticateToken);
 router.get('/', async (req, res) => {
     try {
         let query = {};
-        if (req.user.role !== 'super_admin' && req.user.department_id) {
+
+        // 검색 조건 (department_id)
+        if (req.query.department_id && req.query.department_id !== 'all') {
+            query.department_id = req.query.department_id;
+        }
+
+        // 권한 체크: super_admin이 아니면 본인 부서만 조회
+        if (req.user.role !== 'super_admin') {
             query.department_id = req.user.department_id;
         }
 
