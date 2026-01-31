@@ -83,9 +83,45 @@ function requireTeacher(req, res, next) {
     return res.status(403).json({ error: '접근 권한이 없습니다' });
 }
 
+// 그룹 리더 권한 체크 미들웨어
+async function authorizeGroupLeader(req, res, next) {
+    try {
+        const Group = require('../models/Group');
+        const MemberGroup = require('../models/MemberGroup');
+
+        // 관리자는 모든 접근 허용
+        if (req.user.role === 'super_admin' || req.user.role === 'admin') {
+            return next();
+        }
+
+        // 그룹 리더인지 확인
+        const userGroups = await Group.find({ leader_id: req.user.id });
+
+        if (userGroups.length === 0) {
+            return res.status(403).json({ error: '그룹 리더 권한이 없습니다' });
+        }
+
+        // 요청에 그룹 정보 추가
+        req.userGroups = userGroups;
+        req.userGroupIds = userGroups.map(g => g._id);
+
+        // 그룹 멤버 ID 목록 가져오기
+        const memberGroups = await MemberGroup.find({
+            group_id: { $in: req.userGroupIds }
+        });
+        req.groupMemberIds = memberGroups.map(mg => mg.member_id);
+
+        next();
+    } catch (error) {
+        console.error('그룹 리더 권한 체크 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다' });
+    }
+}
+
 module.exports = {
     authenticateToken,
     authorizeRole,
+    authorizeGroupLeader,
     requireAdmin,
     requireSuperAdmin,
     requireDepartmentAdmin,

@@ -84,6 +84,44 @@ function updateUserInfo() {
             userRole.style.padding = '0';
         }
     }
+
+    // 3. 그룹 리더 메뉴 표시 확인
+    checkGroupLeaderStatus();
+}
+
+// 그룹 리더 여부 확인 및 메뉴 표시
+async function checkGroupLeaderStatus() {
+    try {
+        console.log('[그룹 리더 체크] 시작, 사용자 ID:', state.user?.id);
+
+        // 모든 그룹 조회
+        const groups = await apiRequest('/features/groups');
+        console.log('[그룹 리더 체크] 전체 그룹:', groups);
+
+        // 내가 리더인 그룹이 있는지 확인
+        const myGroups = groups.filter(g => {
+            // leader_id가 객체일 수도 있고 숫자일 수도 있음
+            const leaderId = typeof g.leader_id === 'object' ? g.leader_id?.id || g.leader_id?._id : g.leader_id;
+            return leaderId === state.user.id;
+        });
+        console.log('[그룹 리더 체크] 내가 리더인 그룹:', myGroups);
+
+        // 그룹 리더 메뉴 표시/숨김
+        const groupLeaderMenu = document.querySelector('.group-leader-only');
+        console.log('[그룹 리더 체크] 메뉴 요소:', groupLeaderMenu);
+
+        if (groupLeaderMenu) {
+            if (myGroups.length > 0) {
+                groupLeaderMenu.style.display = 'flex';
+                console.log('[그룹 리더 체크] ✅ 메뉴 표시됨!');
+            } else {
+                groupLeaderMenu.style.display = 'none';
+                console.log('[그룹 리더 체크] ❌ 리더 아님, 메뉴 숨김');
+            }
+        }
+    } catch (error) {
+        console.error('그룹 리더 상태 확인 오류:', error);
+    }
 }
 
 // 로그인 폼 이벤트

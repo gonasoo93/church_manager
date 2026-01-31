@@ -14,6 +14,7 @@ const memberSchema = new mongoose.Schema({
     status: { type: String, default: 'active' }, // active, inactive, long_term_absent
     address: String,
     notes: String,
+    profile_photo: String, // 프로필 사진 경로
     created_at: { type: Date, default: Date.now },
     updated_at: { type: Date, default: Date.now }
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });

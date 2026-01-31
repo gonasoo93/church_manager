@@ -16,17 +16,34 @@ router.use(authenticateToken);
 // 그룹 조회
 router.get('/groups', async (req, res) => {
     try {
+        const User = require('../models/User');
+
         let query = {};
         if (req.user.role !== 'super_admin' && req.user.department_id) {
             query.department_id = req.user.department_id;
         }
 
-        const groups = await Group.find(query).populate('leader_id', 'name');
-        res.json(groups.map(g => ({
-            ...g.toObject(),
-            id: g._id,
-            leader_name: g.leader_id ? g.leader_id.name : null
-        })));
+        const groups = await Group.find(query);
+
+        // leader_id를 숫자로 유지하면서 leader_name을 별도로 조회
+        const result = await Promise.all(groups.map(async (g) => {
+            let leader_name = null;
+            if (g.leader_id) {
+                const leader = await User.findById(g.leader_id);
+                leader_name = leader ? leader.name : null;
+            }
+
+            return {
+                id: g._id,
+                name: g.name,
+                type: g.type,
+                leader_id: g.leader_id, // 숫자 그대로
+                leader_name: leader_name,
+                created_at: g.created_at
+            };
+        }));
+
+        res.json(result);
     } catch (error) {
         console.error('그룹 조회 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다' });
@@ -62,6 +79,33 @@ router.delete('/groups/:id', async (req, res) => {
         res.json({ message: '그룹이 삭제되었습니다' });
     } catch (error) {
         console.error('그룹 삭제 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다' });
+    }
+});
+
+// 그룹 멤버 조회
+router.get('/groups/:id/members', async (req, res) => {
+    try {
+        const Member = require('../models/Member');
+
+        const memberGroups = await MemberGroup.find({ group_id: parseInt(req.params.id) });
+
+        const memberIds = memberGroups.map(mg => mg.member_id);
+        const members = await Member.find({ _id: { $in: memberIds } });
+
+        const result = memberGroups.map(mg => {
+            const member = members.find(m => m._id === mg.member_id);
+            return {
+                member_id: mg.member_id,
+                member_name: member ? member.name : '알 수 없음',
+                grade: member ? member.grade : '',
+                joined_at: mg.joined_at
+            };
+        });
+
+        res.json(result);
+    } catch (error) {
+        console.error('그룹 멤버 조회 오류:', error);
         res.status(500).json({ error: '서버 오류가 발생했습니다' });
     }
 });

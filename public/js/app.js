@@ -113,6 +113,7 @@ function showView(viewName) {
         'meetings': initMeetings,
         'announcements': initAnnouncements,
         'groups': initGroups,
+        'group-leader-dashboard': initGroupLeaderDashboard,
         'events': initEvents,
         'admin': initAdmin,
         'profile': initProfile

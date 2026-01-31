@@ -100,6 +100,7 @@ app.use('/api/announcements', require('./routes/announcements'));
 app.use('/api/search', require('./routes/search'));
 app.use('/api/export', require('./routes/export'));
 app.use('/api/features', require('./routes/features'));
+app.use('/api/upload', require('./routes/upload'));
 app.use('/api/meetings', require('./routes/meetings'));
 
 // 데이터 시딩 엔드포인트 (임시)
