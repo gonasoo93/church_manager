@@ -250,8 +250,117 @@ async function initDashboard() {
             document.getElementById('week-attendance').textContent = `${attendanceRate}%`;
         }
 
+        // 최근 활동 로드
+        await loadRecentActivities();
+
     } catch (error) {
         console.error('대시보드 로드 오류:', error);
+    }
+}
+
+// 최근 활동 로드
+async function loadRecentActivities() {
+    try {
+        const container = document.getElementById('recent-activities');
+        let html = '';
+
+        // 1. 다가오는 행사
+        try {
+            const events = await apiRequest('/features/events');
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+
+            const upcomingEvents = events
+                .filter(e => new Date(e.event_date) >= today)
+                .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+                .slice(0, 3);
+
+            if (upcomingEvents.length > 0) {
+                html += '<div class="activity-section"><h4>🎉 다가오는 행사</h4>';
+                upcomingEvents.forEach(e => {
+                    const date = new Date(e.event_date).toLocaleDateString();
+                    const daysUntil = Math.ceil((new Date(e.event_date) - today) / (1000 * 60 * 60 * 24));
+                    const daysText = daysUntil === 0 ? '오늘' : daysUntil === 1 ? '내일' : `${daysUntil}일 후`;
+                    html += `
+                        <div class="activity-item">
+                            <div class="activity-title">${e.title}</div>
+                            <div class="activity-meta">${date} · ${daysText}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+        } catch (e) {
+            console.error('행사 로드 실패:', e);
+        }
+
+        // 2. 최근 공지사항 (최대 3개)
+        try {
+            const announcements = await apiRequest('/announcements?limit=3');
+            if (announcements.length > 0) {
+                html += '<div class="activity-section"><h4>📢 최근 공지</h4>';
+                announcements.slice(0, 3).forEach(a => {
+                    const date = new Date(a.created_at).toLocaleDateString();
+                    html += `
+                        <div class="activity-item">
+                            <div class="activity-title">${a.title}</div>
+                            <div class="activity-meta">${date}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+        } catch (e) {
+            console.error('공지사항 로드 실패:', e);
+        }
+
+        // 3. 최근 예배 기록 (최대 3개)
+        try {
+            const worship = await apiRequest('/worship?limit=3');
+            if (worship.length > 0) {
+                html += '<div class="activity-section"><h4>📖 최근 예배</h4>';
+                worship.slice(0, 3).forEach(w => {
+                    const date = new Date(w.date).toLocaleDateString();
+                    html += `
+                        <div class="activity-item">
+                            <div class="activity-title">${w.title || '제목 없음'}</div>
+                            <div class="activity-meta">${date} · ${w.speaker || '-'}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+        } catch (e) {
+            console.error('예배 기록 로드 실패:', e);
+        }
+
+        // 4. 최근 회의 기록 (최대 3개)
+        try {
+            const meetings = await apiRequest('/meetings?limit=3');
+            if (meetings.length > 0) {
+                html += '<div class="activity-section"><h4>💼 최근 회의</h4>';
+                meetings.slice(0, 3).forEach(m => {
+                    const date = new Date(m.date).toLocaleDateString();
+                    html += `
+                        <div class="activity-item">
+                            <div class="activity-title">${m.title || '제목 없음'}</div>
+                            <div class="activity-meta">${date}</div>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+            }
+        } catch (e) {
+            console.error('회의 기록 로드 실패:', e);
+        }
+
+        if (html === '') {
+            html = '<p class="empty-state">활동 내역이 없습니다</p>';
+        }
+
+        container.innerHTML = html;
+    } catch (error) {
+        console.error('최근 활동 로드 오류:', error);
     }
 }
 
