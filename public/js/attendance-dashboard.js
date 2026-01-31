@@ -4,7 +4,7 @@ let trendsChart = null;
 let deptComparisonChart = null;
 
 // 대시보드 초기화
-async function initDashboard() {
+async function initAttendanceDashboard() {
     // 탭 전환 이벤트
     setupTabSwitching();
 

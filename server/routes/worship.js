@@ -132,6 +132,21 @@ router.put('/:id', async (req, res) => {
 // 예배 일지 삭제
 router.delete('/:id', async (req, res) => {
     try {
+        const worship = await Worship.findById(req.params.id);
+        if (!worship) {
+            return res.status(404).json({ error: '해당 예배 일지를 찾을 수 없습니다' });
+        }
+
+        // 권한 체크: 부서관리자 이상만 삭제 가능
+        if (req.user.role !== 'super_admin' && req.user.role !== 'department_admin' && req.user.role !== 'admin') {
+            return res.status(403).json({ error: '삭제 권한이 없습니다' });
+        }
+
+        // 부서가 다른 경우 체크
+        if (req.user.role !== 'super_admin' && worship.department_id !== req.user.department_id) {
+            return res.status(403).json({ error: '다른 부서의 기록은 삭제할 수 없습니다' });
+        }
+
         await Worship.findByIdAndDelete(req.params.id);
         res.json({ message: '예배 일지가 삭제되었습니다' });
     } catch (error) {

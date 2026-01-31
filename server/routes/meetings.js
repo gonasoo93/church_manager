@@ -177,6 +177,21 @@ router.put('/:id', async (req, res) => {
 // 회의 기록 삭제
 router.delete('/:id', async (req, res) => {
     try {
+        const meeting = await Meeting.findById(req.params.id);
+        if (!meeting) {
+            return res.status(404).json({ error: '해당 회의 기록을 찾을 수 없습니다' });
+        }
+
+        // 권한 체크: 부서관리자 이상만 삭제 가능
+        if (req.user.role !== 'super_admin' && req.user.role !== 'department_admin' && req.user.role !== 'admin') {
+            return res.status(403).json({ error: '삭제 권한이 없습니다' });
+        }
+
+        // 부서가 다른 경우 체크
+        if (req.user.role !== 'super_admin' && meeting.department_id !== req.user.department_id) {
+            return res.status(403).json({ error: '다른 부서의 기록은 삭제할 수 없습니다' });
+        }
+
         await Meeting.findByIdAndDelete(req.params.id);
         res.json({ message: '회의 기록이 삭제되었습니다' });
     } catch (error) {

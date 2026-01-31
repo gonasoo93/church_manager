@@ -10,22 +10,12 @@ router.use(authenticateToken);
 // 명부 목록 조회
 router.get('/', async (req, res) => {
     try {
-        const Group = require('../models/Group');
-        const MemberGroup = require('../models/MemberGroup');
 
         const { department_id, status } = req.query;
         let query = {};
 
-        // 그룹 리더인 경우: 자신의 그룹 멤버만 조회
-        const userGroups = await Group.find({ leader_id: req.user.id });
-        if (userGroups.length > 0 && req.user.role !== 'super_admin' && req.user.role !== 'admin') {
-            const groupIds = userGroups.map(g => g._id);
-            const memberGroups = await MemberGroup.find({ group_id: { $in: groupIds } });
-            const memberIds = memberGroups.map(mg => mg.member_id);
-            query._id = { $in: memberIds };
-        }
-        // 부서 필터링
-        else if (req.user.role !== 'super_admin' && req.user.department_id) {
+        // 부서 필터링: 그룹 리더도 부서 전체를 조회 가능 (Read 권한)
+        if (req.user.role !== 'super_admin' && req.user.department_id) {
             query.department_id = req.user.department_id;
         } else if (req.user.role === 'super_admin' && department_id && department_id !== 'all') {
             query.department_id = parseInt(department_id);

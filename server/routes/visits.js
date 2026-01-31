@@ -9,10 +9,22 @@ const Counter = require('../models/Counter');
 // 심방 기록 CRUD
 
 // 목록 조회
-router.get('/', authenticateToken, requireTeacher, async (req, res) => {
+router.get('/', authenticateToken, async (req, res) => {
     try {
         const { member_id, department_id } = req.query;
         let query = {};
+
+        // 그룹 리더 체크
+        const Group = require('../models/Group');
+        const userGroups = await Group.find({ leader_id: req.user.id });
+        const isGroupLeader = userGroups.length > 0;
+
+        // 교사 또는 관리자 또는 그룹 리더만 접근 가능
+        const hasAccess = ['super_admin', 'department_admin', 'teacher', 'admin'].includes(req.user.role) || isGroupLeader;
+
+        if (!hasAccess) {
+            return res.status(403).json({ error: '접근 권한이 없습니다' });
+        }
 
         // 부서 및 권한 필터링
         if (member_id) {
@@ -69,8 +81,20 @@ router.get('/', authenticateToken, requireTeacher, async (req, res) => {
 });
 
 // 기록 등록
-router.post('/', authenticateToken, requireTeacher, async (req, res) => {
+router.post('/', authenticateToken, async (req, res) => {
     try {
+        // 그룹 리더 체크
+        const Group = require('../models/Group');
+        const userGroups = await Group.find({ leader_id: req.user.id });
+        const isGroupLeader = userGroups.length > 0;
+
+        // 교사 또는 관리자 또는 그룹 리더만 접근 가능
+        const hasAccess = ['super_admin', 'department_admin', 'teacher', 'admin'].includes(req.user.role) || isGroupLeader;
+
+        if (!hasAccess) {
+            return res.status(403).json({ error: '접근 권한이 없습니다' });
+        }
+
         const { member_id, date, type, content } = req.body;
 
         if (!member_id || !date || !content) {

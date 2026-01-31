@@ -235,13 +235,13 @@ async function initDashboard() {
         // 회의 기록 수
         document.getElementById('total-meetings').textContent = meetings.length;
 
-        // 이번 주 출석률 계산
+        // 최근 한달 출석률 계산
         const today = new Date();
-        const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-        const weekAgoStr = weekAgo.toISOString().split('T')[0];
+        const monthAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+        const monthAgoStr = monthAgo.toISOString().split('T')[0];
         const todayStr = today.toISOString().split('T')[0];
 
-        const stats = await apiRequest(`/attendance/stats?startDate=${weekAgoStr}&endDate=${todayStr}`);
+        const stats = await apiRequest(`/attendance/stats?startDate=${monthAgoStr}&endDate=${todayStr}`);
 
         if (stats.length > 0) {
             const totalPresent = stats.reduce((sum, s) => sum + s.present_count, 0);

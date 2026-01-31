@@ -222,6 +222,34 @@ router.post('/bulk', async (req, res) => {
     }
 });
 
+// 날짜별 출석 기록 일괄 삭제
+router.delete('/date/:date', async (req, res) => {
+    try {
+        const { date } = req.params;
+
+        if (!date) {
+            return res.status(400).json({ error: '날짜를 입력해주세요' });
+        }
+
+        // 권한 체크: 해당 부서의 출석만 삭제 가능
+        let query = { date };
+
+        if (req.user.role !== 'super_admin' && req.user.department_id) {
+            query.department_id = req.user.department_id;
+        }
+
+        const result = await Attendance.deleteMany(query);
+
+        res.json({
+            message: '출석 기록이 삭제되었습니다',
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('날짜별 출석 삭제 오류:', error);
+        res.status(500).json({ error: '서버 오류가 발생했습니다' });
+    }
+});
+
 // 출석 기록 삭제
 router.delete('/:id', async (req, res) => {
     try {

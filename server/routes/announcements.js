@@ -79,6 +79,24 @@ router.put('/:id', async (req, res) => {
 // 공지사항 삭제
 router.delete('/:id', async (req, res) => {
     try {
+        const announcement = await Announcement.findById(req.params.id);
+        if (!announcement) {
+            return res.status(404).json({ error: '해당 공지사항을 찾을 수 없습니다' });
+        }
+
+        // 권한 체크: 작성자 또는 부서관리자 이상만 삭제 가능
+        const isAuthor = announcement.author_id && announcement.author_id.toString() === req.user.id.toString();
+        const isAdmin = req.user.role === 'super_admin' || req.user.role === 'department_admin' || req.user.role === 'admin';
+
+        if (!isAuthor && !isAdmin) {
+            return res.status(403).json({ error: '삭제 권한이 없습니다' });
+        }
+
+        // 부서가 다른 경우 체크 (관리자가 아닌 경우)
+        if (!isAdmin && req.user.role !== 'super_admin' && announcement.department_id !== req.user.department_id) {
+            return res.status(403).json({ error: '다른 부서의 공지사항은 삭제할 수 없습니다' });
+        }
+
         await Announcement.findByIdAndDelete(req.params.id);
         res.json({ message: '공지사항이 삭제되었습니다' });
     } catch (error) {
